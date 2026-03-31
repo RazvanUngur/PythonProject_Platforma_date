@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b0f1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>CESTRIN Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{
+  --bg:#0b0f1a; --panel:#111827; --border:#1e2d40;
+  --accent:#00c8ff; --text:#c9d8e8; --dim:#5a7a96;
+  /* Stări noi */
+  --clasificator:#00e676;
+  --totalizator:#ffd600;
+  --defect:#ff6d00;
+  --nefunctional:#ff1744;
+  --fara-conexiune:#d500f9;
+  --unknown:#ffffff;
+  --sb:290px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);font-family:'Rajdhani',sans-serif;color:var(--text);display:flex;flex-direction:column}
+
+/* ── HEADER ── */
+header{
+  display:flex;align-items:center;gap:10px;
+  padding:0 12px;height:50px;flex-shrink:0;
+  background:var(--panel);border-bottom:1px solid var(--border);z-index:1000;
+}
+.hex{width:26px;height:26px;background:var(--accent);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000;flex-shrink:0}
+.ltxt{font-size:15px;font-weight:700;letter-spacing:2px;color:#fff;white-space:nowrap}
+.chips{display:flex;gap:12px;flex:1;justify-content:center;overflow:hidden}
+.chip{display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:10px;white-space:nowrap}
+.cdot{width:6px;height:6px;border-radius:50%}
+.cval{color:#fff;font-size:12px;font-weight:500}
+.hright{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.upd{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);text-align:right}
+.bsm{padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--dim);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.bsm:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── LAYOUT ── */
+.main{display:flex;flex:1;overflow:hidden;position:relative}
+
+/* ── SIDEBAR ── */
+.sb{width:var(--sb);background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;transition:transform .25s ease}
+.sb.hidden{transform:translateX(calc(-1 * var(--sb)))}
+.sbh{padding:10px 11px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:7px}
+.sblbl{font-size:9px;letter-spacing:3px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.srch{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:7px 10px;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+.srch:focus{border-color:var(--accent)}
+.srch::placeholder{color:var(--dim)}
+
+/* ── SECTIUNI FILTRE ── */
+.filter-section{display:flex;flex-direction:column;gap:4px}
+.filter-label{font-size:9px;letter-spacing:2px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.frow{display:flex;gap:4px;flex-wrap:wrap}
+.fb{padding:3px 9px;border-radius:20px;border:1px solid transparent;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;cursor:pointer;background:transparent;opacity:.45;transition:all .15s}
+.fb.on{opacity:1}
+.fb:hover{opacity:.85}
+
+/* ── TIP CONTOR TOGGLE ── */
+.tip-row{display:flex;gap:6px}
+.tip-btn{flex:1;padding:5px 0;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--dim);font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.tip-btn.on{border-color:var(--accent);color:var(--accent);background:rgba(0,200,255,.08)}
+
+/* ── LISTA POSTURI ── */
+.vlist{flex:1;overflow-y:auto;overflow-x:hidden;position:relative}
+.vlist::-webkit-scrollbar{width:3px}
+.vlist::-webkit-scrollbar-thumb{background:var(--border)}
+.vlist-inner{position:relative}
+.pi{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:5px;cursor:pointer;transition:background .1s;border:1px solid transparent;margin:1px 3px}
+.pi:hover{background:rgba(255,255,255,.04)}
+.pi.sel{background:rgba(0,200,255,.07);border-color:rgba(0,200,255,.2)}
+.pb{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1.5px solid rgba(255,255,255,.2)}
+.pif{flex:1;min-width:0}
+.pn{font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pm{font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.pkm{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);flex-shrink:0}
+.nores{text-align:center;padding:32px 12px;color:var(--dim);font-size:13px}
+
+/* Badge tip contor */
+.tip-badge{font-family:'JetBrains Mono',monospace;font-size:9px;padding:1px 5px;border-radius:3px;flex-shrink:0}
+.tip-peek{background:rgba(0,200,255,.15);color:var(--accent)}
+.tip-vek{background:rgba(255,214,0,.15);color:#ffd600}
+.tip-other{background:rgba(90,122,150,.15);color:var(--dim)}
+
+/* ── FARA POZITIE banner în sidebar ── */
+.unplaced-banner{
+  margin:6px 8px;padding:8px 10px;
+  border-radius:5px;border:1px dashed rgba(255,255,255,.2);
+  font-size:11px;color:var(--dim);
+  display:none;
+}
+.unplaced-banner.show{display:block}
+.unplaced-banner b{color:#fff;display:block;margin-bottom:3px}
+
+/* ── MAP ── */
+#map{flex:1;background:#0d1520}
+.leaflet-tile{filter:brightness(.35) saturate(.4) hue-rotate(190deg)}
+
+/* ── TOOLTIP ── */
+.leaflet-tooltip{background:var(--panel)!important;border:1px solid var(--border)!important;border-radius:8px!important;color:var(--text)!important;font-family:'Rajdhani',sans-serif!important;padding:0!important;box-shadow:0 8px 32px rgba(0,0,0,.7)!important;min-width:210px}
+.leaflet-tooltip::before{display:none!important}
+.tth{padding:8px 12px 6px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.ttd{width:9px;height:9px;border-radius:50%;flex-shrink:0;border:1.5px solid rgba(255,255,255,.3)}
+.ttn{font-size:13px;font-weight:700;color:#fff}
+.ttb{padding:6px 12px 10px}
+.ttr{display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px}
+.ttl{color:var(--dim)}
+.ttv{color:#fff;font-weight:600;font-family:'JetBrains Mono',monospace;font-size:11px}
+.ttbdg{display:inline-block;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:1px;margin-top:3px}
+.tt-drag-hint{padding:6px 12px 8px;border-top:1px solid var(--border);font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+
+/* ── MARKER ── */
+.mc{position:relative;display:flex;align-items:center;justify-content:center}
+.mp{position:absolute;border-radius:50%;animation:pulse 2.8s infinite}
+@keyframes pulse{0%{transform:scale(1);opacity:.55}70%{transform:scale(2.5);opacity:0}100%{transform:scale(1);opacity:0}}
+.mk{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.25);position:relative;z-index:2}
+/* Marker fără coordonate — pătrat alb */
+.mk-unplaced{width:14px;height:14px;border-radius:3px;border:2px dashed rgba(255,255,255,.6);background:rgba(255,255,255,.15);position:relative;z-index:2}
+
+/* ── DRAG MODE overlay ── */
+#drag-hint{
+  position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  background:rgba(0,200,255,.9);color:#000;
+  padding:8px 18px;border-radius:20px;
+  font-size:13px;font-weight:700;letter-spacing:1px;
+  z-index:2000;display:none;white-space:nowrap;
+  box-shadow:0 4px 20px rgba(0,200,255,.4);
+}
+#drag-hint.show{display:block}
+
+/* ── TOAST notificare salvare ── */
+#toast{
+  position:absolute;bottom:70px;left:50%;transform:translateX(-50%);
+  padding:9px 20px;border-radius:6px;
+  font-size:13px;font-weight:600;letter-spacing:1px;
+  z-index:3000;display:none;white-space:nowrap;
+  transition:opacity .3s;
+}
+#toast.ok{background:rgba(0,230,118,.9);color:#000;display:block}
+#toast.err{background:rgba(255,61,87,.9);color:#fff;display:block}
+
+/* ── LEGEND ── */
+.leg{position:absolute;bottom:18px;right:12px;background:var(--panel);border:1px solid var(--border);border-radius:7px;padding:9px 13px;z-index:500}
+.lgt{font-size:9px;letter-spacing:3px;color:var(--dim);margin-bottom:7px;font-family:'JetBrains Mono',monospace}
+.li{display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:12px;font-weight:600}
+.ld{width:10px;height:10px;border-radius:50%;border:1.5px solid rgba(255,255,255,.2)}
+.li-unplaced .ld{border-radius:2px;border:1.5px dashed rgba(255,255,255,.5);background:rgba(255,255,255,.1)}
+
+/* ── LOADING ── */
+#ld{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:9999;transition:opacity .35s}
+#ld.hide{opacity:0;pointer-events:none}
+.ldspin{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ldtxt{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:2px}
+
+/* ── MOBILE ── */
+@media(max-width:640px){
+  :root{--sb:100vw}
+  .chips{display:none}
+  .upd{display:none!important}
+  .sb{position:absolute;top:0;bottom:0;left:0;z-index:200}
+  .sb.hidden{transform:translateX(-100%)}
+  .bsm.tog{display:block}
+  .leg{bottom:60px}
+}
+@media(min-width:641px){
+  .bsm.tog{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="ld"><div class="ldspin"></div><div class="ldtxt">SE ÎNCARCĂ...</div></div>
+<div id="drag-hint">📍 CLICK PE HARTĂ PENTRU A PLASA CONTORUL</div>
+<div id="toast"></div>
+
+<header>
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <div class="hex">C</div>
+    <div class="ltxt">CESTRIN</div>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="hright">
+    <div class="upd" id="upd" style="display:none">ACT.<br><span id="updv" style="color:var(--accent)">—</span></div>
+    <button class="bsm tog" onclick="toggleSb()">☰</button>
+    <button class="bsm" id="btnadm" style="display:none" onclick="location.href='/admin'">ADMIN</button>
+    <button class="bsm" onclick="logout()">IEȘIRE</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="sb" id="sb">
+    <div class="sbh">
+      <div class="sblbl">POSTURI — <span id="cnt">0</span></div>
+
+      <input class="srch" id="srch" type="search" placeholder="contor, DN, localitate...">
+
+      <!-- Filtre Tip contor -->
+      <div class="filter-section">
+        <div class="filter-label">TIP CONTOR</div>
+        <div class="tip-row">
+          <button class="tip-btn on" id="tb-peek" onclick="toggleTip('PEEK')">PEEK</button>
+          <button class="tip-btn on" id="tb-vek"  onclick="toggleTip('VEK')">VEK</button>
+          <button class="tip-btn on" id="tb-alt"  onclick="toggleTip('ALT')">Altele</button>
+        </div>
+      </div>
+
+      <!-- Filtre Stare -->
+      <div class="filter-section">
+        <div class="filter-label">MOD DE FUNCȚIONARE</div>
+        <div class="frow" id="fstare"></div>
+      </div>
+    </div>
+
+    <!-- Banner posturi fără coordonate -->
+    <div class="unplaced-banner" id="unplacedBanner">
+      <b>⚪ Contoare fără poziție</b>
+      Selectați un contor din listă și plasați-l pe hartă cu click.
+    </div>
+
+    <div class="vlist" id="vlist">
+      <div class="vlist-inner" id="vinner"></div>
+    </div>
+  </div>
+
+  <div id="map"></div>
+</div>
+
+<!-- LEGENDĂ -->
+<div class="leg">
+  <div class="lgt">MOD FUNCȚIONARE</div>
+  <div class="li"><div class="ld" style="background:var(--clasificator)"></div>Clasificator</div>
+  <div class="li"><div class="ld" style="background:var(--totalizator)"></div>Totalizator</div>
+  <div class="li"><div class="ld" style="background:var(--defect)"></div>Defect</div>
+  <div class="li"><div class="ld" style="background:var(--nefunctional)"></div>Nu funcționează</div>
+  <div class="li"><div class="ld" style="background:var(--fara-conexiune)"></div>Fără conexiune</div>
+  <div class="li li-unplaced"><div class="ld"></div>Fără poziție GIS</div>
+</div>
+
+<script>
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+const tk   = localStorage.getItem('tk');
+const role = localStorage.getItem('role');
+if(!tk) location.replace('/');
+if(role==='admin') document.getElementById('btnadm').style.display='block';
+const H = () => ({'Authorization':'Bearer '+tk,'Content-Type':'application/json'});
+
+function logout(){ fetch('/api/logout',{method:'POST'}); localStorage.clear(); location.replace('/'); }
+
+// ── DEFINIȚII STĂRI ───────────────────────────────────────────────────────────
+const ST = {
+  clasificator:  { l:'Clasificator',    c:'#00e676' },
+  totalizator:   { l:'Totalizator',     c:'#ffd600' },
+  defect:        { l:'Defect',          c:'#ff6d00' },
+  nefunctional:  { l:'Nu funcționează', c:'#ff1744' },
+  fara_conexiune:{ l:'Fără conexiune',  c:'#d500f9' },
+  unknown:       { l:'Necunoscut',      c:'#ffffff' },
+};
+
+// ── HARTĂ ─────────────────────────────────────────────────────────────────────
+const map = L.map('map',{center:[45.9,24.5],zoom:7,zoomControl:false});
+L.control.zoom({position:'bottomleft'}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap', maxZoom:18
+}).addTo(map);
+
+function mkIcon(c, hasCoords) {
+  if(!hasCoords){
+    return L.divIcon({
+      html:`<div class="mc"><div class="mk-unplaced"></div></div>`,
+      className:'',iconSize:[14,14],iconAnchor:[7,7],tooltipAnchor:[10,0]
+    });
+  }
+  const col = (ST[c.stare]||ST.unknown).c;
+  return L.divIcon({
+    html:`<div class="mc">
+      <div class="mp" style="width:14px;height:14px;background:${col};top:0;left:0"></div>
+      <div class="mk" style="background:${col}"></div>
+    </div>`,
+    className:'',iconSize:[14,14],iconAnchor:[7,7],tooltipAnchor:[10,0]
+  });
+}
+
+function tipClass(tip){
+  if(!tip) return 'tip-other';
+  const t = tip.toUpperCase();
+  if(t.includes('PEEK')) return 'tip-peek';
+  if(t.includes('VEK'))  return 'tip-vek';
+  return 'tip-other';
+}
+function tipLabel(tip){
+  if(!tip) return '?';
+  const t = tip.toUpperCase();
+  if(t.includes('PEEK')) return 'PEEK';
+  if(t.includes('VEK'))  return 'VEK';
+  return tip.slice(0,6);
+}
+
+function mkTip(c) {
+  const s   = ST[c.stare]||ST.unknown;
+  const pos = (c.lat && c.lng)
+    ? `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}`
+    : '— fără poziție GIS';
+  const dragHint = (!c.lat || !c.lng)
+    ? `<div class="tt-drag-hint">📍 Selectați și plasați pe hartă</div>`
+    : (c.coords_sursa==='manual'
+        ? `<div class="tt-drag-hint">📍 Poziție plasată manual — trageți pentru a muta</div>`
+        : '');
+
+  return `<div class="tth">
+    <div class="ttd" style="background:${s.c}"></div>
+    <div class="ttn">${c.id} — ${c.drum||''}</div>
+  </div>
+  <div class="ttb">
+    <div class="ttr"><span class="ttl">Localitate</span><span class="ttv">${c.localitate||'—'}</span></div>
+    <div class="ttr"><span class="ttl">Km</span><span class="ttv">${c.km||'—'}</span></div>
+    <div class="ttr"><span class="ttl">Tip</span><span class="ttv">${c.tip||'—'}</span></div>
+    <div class="ttr"><span class="ttl">Ultima lună</span><span class="ttv">${c.ultima_luna||'—'}</span></div>
+    <div class="ttr"><span class="ttl">Total veh./zi</span><span class="ttv">${c.total_vehicule||'—'}</span></div>
+    <div class="ttr"><span class="ttl">Coordonate</span><span class="ttv" style="font-size:10px">${pos}</span></div>
+    <div class="ttr"><span class="ttl">Stare</span>
+      <span class="ttbdg" style="background:${s.c}22;color:${s.c};border:1px solid ${s.c}44">
+        ${s.l.toUpperCase()}
+      </span>
+    </div>
+  </div>${dragHint}`;
+}
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let all=[], filtered=[], markers={}, selId=null;
+let filtruStari = new Set(Object.keys(ST));
+let filtruTip   = new Set(['PEEK','VEK','ALT']);
+let srch='', sbOpen=true, lastEtag='';
+// Mod plasare manuală
+let placingId = null;
+
+// ── DRAG MARKER ──────────────────────────────────────────────────────────────
+function makeMarkerDraggable(m, c) {
+  m.on('dragend', async function(e){
+    const pos = e.target.getLatLng();
+    await saveCoords(c.id, pos.lat, pos.lng);
+    // Actualizează local
+    c.lat = pos.lat;
+    c.lng = pos.lng;
+    c.coords_sursa = 'manual';
+    m.setTooltipContent(mkTip(c));
+    // Actualizează iconița (era unplaced, acum are coords)
+    m.setIcon(mkIcon(c, true));
+    showToast(`✅ Contor ${c.id} salvat`, 'ok');
+  });
+}
+
+async function saveCoords(id, lat, lng){
+  try{
+    const r = await fetch('/api/coords', {
+      method:'POST',
+      headers: H(),
+      body: JSON.stringify({id, lat, lng})
+    });
+    if(!r.ok) throw new Error(await r.text());
+    return true;
+  } catch(e){
+    showToast(`❌ Eroare salvare: ${e.message}`, 'err');
+    return false;
+  }
+}
+
+function showToast(msg, type, ms=2800){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = type;
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{ el.className=''; el.style.display='none'; }, ms);
+}
+
+// ── MOD PLASARE MANUALĂ ────────────────────────────────────────────────────────
+function startPlacing(id){
+  placingId = id;
+  document.getElementById('drag-hint').classList.add('show');
+  map.getContainer().style.cursor = 'crosshair';
+  // Pe mobil: închide sidebar
+  if(window.innerWidth<=640){ sbOpen=false; document.getElementById('sb').classList.add('hidden'); }
+}
+
+function cancelPlacing(){
+  placingId = null;
+  document.getElementById('drag-hint').classList.remove('show');
+  map.getContainer().style.cursor = '';
+}
+
+map.on('click', async function(e){
+  if(!placingId) return;
+  const id  = placingId;
+  const lat = e.latlng.lat;
+  const lng = e.latlng.lng;
+  cancelPlacing();
+
+  const ok = await saveCoords(id, lat, lng);
+  if(!ok) return;
+
+  // Actualizează obiectul local
+  const c = all.find(x=>x.id===id);
+  if(c){
+    c.lat = lat; c.lng = lng; c.coords_sursa = 'manual';
+    // Recreează markerul cu noile coordonate
+    if(markers[id]) map.removeLayer(markers[id]);
+    const m = L.marker([lat,lng],{icon:mkIcon(c,true),draggable:true})
+      .bindTooltip(mkTip(c),{permanent:false,direction:'right',opacity:1,className:''})
+      .addTo(map);
+    m.on('click',()=>selectPost(id));
+    makeMarkerDraggable(m,c);
+    markers[id]=m;
+    map.flyTo([lat,lng],13,{duration:.8});
+  }
+  showToast(`✅ Contor ${id} plasat și salvat`, 'ok');
+  renderList();
+  updateUnplacedBanner();
+});
+
+// ── SIDEBAR TOGGLE ────────────────────────────────────────────────────────────
+function toggleSb(){
+  sbOpen=!sbOpen;
+  document.getElementById('sb').classList.toggle('hidden',!sbOpen);
+}
+
+// ── FETCH DATE ────────────────────────────────────────────────────────────────
+async function loadStatus(){
+  try{
+    const headers={'Authorization':'Bearer '+tk};
+    if(lastEtag) headers['If-None-Match']=lastEtag;
+    const r = await fetch('/api/status',{headers});
+    if(r.status===401){logout();return}
+    if(r.status===304) return;
+    lastEtag = r.headers.get('ETag')||'';
+    const d  = await r.json();
+    all = d.contoare||[];
+
+    if(d.ultima_actualizare){
+      const dt=new Date(d.ultima_actualizare);
+      document.getElementById('updv').textContent =
+        dt.toLocaleDateString('ro-RO',{day:'2-digit',month:'short'})+' '+
+        dt.toLocaleTimeString('ro-RO',{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('upd').style.display='block';
+    }
+
+    renderMarkers();
+    renderChips();
+    renderStareFilters();
+    applyFilter();
+    updateUnplacedBanner();
+  } catch(e){ console.error(e); }
+
+  document.getElementById('ld').classList.add('hide');
+  setTimeout(()=>{ const l=document.getElementById('ld'); if(l)l.remove(); },400);
+}
+
+// ── MARKERE ───────────────────────────────────────────────────────────────────
+function renderMarkers(){
+  Object.values(markers).forEach(m=>map.removeLayer(m));
+  markers={};
+
+  all.forEach(c=>{
+    const hasCoords = !!(c.lat && c.lng);
+    // Posturi fără coordonate: plasate la (0,0) virtual — nu le adăugăm pe hartă
+    // Sunt vizibile în sidebar și se pot plasa manual
+    if(!hasCoords) return;
+
+    const m = L.marker([c.lat,c.lng],{
+      icon: mkIcon(c, true),
+      draggable: !!(c.coords_sursa==='manual' || !c.x)  // draggable dacă e plasat manual
+    })
+    .bindTooltip(mkTip(c),{permanent:false,direction:'right',opacity:1,className:''})
+    .addTo(map);
+
+    m.on('click',()=>selectPost(c.id));
+    if(m.options.draggable) makeMarkerDraggable(m,c);
+    markers[c.id]=m;
+  });
+}
+
+// ── CHIPS HEADER ──────────────────────────────────────────────────────────────
+function renderChips(){
+  const cnt={};
+  all.forEach(c=>cnt[c.stare]=(cnt[c.stare]||0)+1);
+  document.getElementById('chips').innerHTML =
+    Object.entries(ST).map(([k,s])=>`
+      <div class="chip">
+        <div class="cdot" style="background:${s.c};${k==='unknown'?'border:1px solid #555':''}"></div>
+        <span class="cval">${cnt[k]||0}</span>
+        <span style="color:var(--dim);font-size:9px">${s.l}</span>
+      </div>`).join('');
+}
+
+// ── FILTRE STARE ──────────────────────────────────────────────────────────────
+function renderStareFilters(){
+  document.getElementById('fstare').innerHTML =
+    Object.entries(ST).map(([k,s])=>`
+      <button class="fb ${filtruStari.has(k)?'on':''}"
+        style="border-color:${s.c};color:${s.c}"
+        onclick="toggleStare('${k}')">${s.l}</button>`
+    ).join('');
+}
+
+function toggleStare(k){
+  filtruStari.has(k) ? filtruStari.delete(k) : filtruStari.add(k);
+  renderStareFilters();
+  applyFilter();
+  updateMarkerVisibility();
+}
+
+// ── FILTRE TIP ────────────────────────────────────────────────────────────────
+function toggleTip(tip){
+  filtruTip.has(tip) ? filtruTip.delete(tip) : filtruTip.add(tip);
+  document.getElementById('tb-peek').classList.toggle('on', filtruTip.has('PEEK'));
+  document.getElementById('tb-vek').classList.toggle('on',  filtruTip.has('VEK'));
+  document.getElementById('tb-alt').classList.toggle('on',  filtruTip.has('ALT'));
+  applyFilter();
+  updateMarkerVisibility();
+}
+
+function getTipKey(tip){
+  if(!tip) return 'ALT';
+  const t=tip.toUpperCase();
+  if(t.includes('PEEK')) return 'PEEK';
+  if(t.includes('VEK'))  return 'VEK';
+  return 'ALT';
+}
+
+function updateMarkerVisibility(){
+  all.forEach(c=>{
+    const m = markers[c.id];
+    if(!m) return;
+    const vizibil = filtruStari.has(c.stare) && filtruTip.has(getTipKey(c.tip));
+    if(vizibil && !map.hasLayer(m)) map.addLayer(m);
+    if(!vizibil && map.hasLayer(m)) map.removeLayer(m);
+  });
+}
+
+// ── APPLY FILTER + SEARCH ──────────────────────────────────────────────────────
+function applyFilter(){
+  const q=srch.toLowerCase();
+  filtered=all.filter(c=>{
+    const mS = filtruStari.has(c.stare);
+    const mT = filtruTip.has(getTipKey(c.tip));
+    const mQ = !q||[c.id,c.drum,c.localitate,c.tip].some(x=>(x||'').toLowerCase().includes(q));
+    return mS && mT && mQ;
+  });
+  document.getElementById('cnt').textContent=filtered.length;
+  renderList();
+}
+
+// ── VIRTUAL LIST ──────────────────────────────────────────────────────────────
+const ITEM_H=42;
+let visStart=0,visEnd=0;
+
+function renderList(){
+  const vl=document.getElementById('vlist');
+  const vi=document.getElementById('vinner');
+
+  if(!filtered.length){
+    vi.innerHTML='<div class="nores">Niciun post găsit</div>';
+    vi.style.height=''; return;
+  }
+
+  vi.style.height=(filtered.length*ITEM_H)+'px';
+
+  function paint(){
+    const sc=vl.scrollTop, ch=vl.clientHeight;
+    const start=Math.max(0,Math.floor(sc/ITEM_H)-2);
+    const end=Math.min(filtered.length,Math.ceil((sc+ch)/ITEM_H)+2);
+    if(start===visStart&&end===visEnd) return;
+    visStart=start; visEnd=end;
+
+    let html='';
+    for(let i=start;i<end;i++){
+      const c=filtered[i];
+      const s=ST[c.stare]||ST.unknown;
+      const hasPos=!!(c.lat&&c.lng);
+      const tkey=getTipKey(c.tip);
+      const tcls=tipClass(c.tip);
+      const tlbl=tipLabel(c.tip);
+
+      html+=`<div class="pi${selId===c.id?' sel':''}"
+        style="position:absolute;top:${i*ITEM_H}px;left:0;right:0"
+        onclick="selectPost('${c.id}')">
+        <div class="pb" style="background:${s.c};${c.stare==='unknown'?'border:1.5px dashed rgba(255,255,255,.5)':''}"></div>
+        <div class="pif">
+          <div class="pn">${c.id} — ${c.localitate||''}</div>
+          <div class="pm">${c.drum||''} km${c.km||'?'} · ${c.ultima_luna||'—'}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+          <span class="tip-badge ${tcls}">${tlbl}</span>
+          ${!hasPos ? `<span style="font-size:9px;color:var(--dim);cursor:pointer" onclick="event.stopPropagation();startPlacing('${c.id}')">📍 Plasează</span>` : ''}
+        </div>
+      </div>`;
+    }
+    vi.innerHTML=html;
+  }
+
+  vl.onscroll=paint;
+  paint();
+}
+
+function updateUnplacedBanner(){
+  const n=all.filter(c=>!c.lat||!c.lng).length;
+  const el=document.getElementById('unplacedBanner');
+  el.classList.toggle('show', n>0);
+  if(n>0) el.querySelector('b').textContent=`⚪ ${n} contoare fără poziție GIS`;
+}
+
+function selectPost(id){
+  selId=id;
+  renderList();
+  const c=all.find(x=>x.id===id);
+  if(!c) return;
+
+  if(c.lat&&c.lng){
+    map.flyTo([c.lat,c.lng],13,{duration:.8,easeLinearity:.5});
+    setTimeout(()=>markers[id]?.openTooltip(),900);
+    if(window.innerWidth<=640){sbOpen=false;document.getElementById('sb').classList.add('hidden')}
+  } else {
+    // Fără coordonate — intră în modul plasare
+    startPlacing(id);
+  }
+}
+
+document.getElementById('srch').addEventListener('input',e=>{srch=e.target.value;applyFilter()});
+
+// ── ESC anulează plasarea ─────────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{if(e.key==='Escape') cancelPlacing()});
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+renderStareFilters();
+loadStatus();
+setInterval(loadStatus,5*60*1000);
+</script>
+</body>
+</html>

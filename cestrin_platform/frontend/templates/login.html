@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#080d14">
+<title>CESTRIN — Monitor Trafic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080d14;--panel:#0f1724;--border:#1a2840;
+  --accent:#00c8ff;--ok:#00e676;--err:#ff3d57;
+  --text:#c9d8e8;--dim:#4a6a86;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);font-family:'Rajdhani',sans-serif;
+  color:var(--text);display:flex;align-items:center;
+  justify-content:center;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(0,200,255,.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,200,255,.025) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;
+}
+body::after{
+  content:'';position:fixed;
+  width:700px;height:700px;
+  background:radial-gradient(circle,rgba(0,200,255,.05) 0%,transparent 65%);
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+.wrap{
+  width:100%;max-width:400px;padding:0 20px;
+  position:relative;z-index:1;
+  animation:up .4s ease;
+}
+@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.card{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:14px;padding:36px 32px;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+.logo{text-align:center;margin-bottom:32px}
+.hex{
+  width:52px;height:52px;margin:0 auto 14px;
+  background:linear-gradient(135deg,var(--accent),#0070e0);
+  clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:18px;
+  font-weight:500;color:#000;
+  box-shadow:0 0 28px rgba(0,200,255,.25);
+}
+.title{font-size:22px;font-weight:700;letter-spacing:3px;color:#fff}
+.sub{
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;letter-spacing:2px;color:var(--dim);margin-top:3px;
+}
+.field{margin-bottom:16px}
+label{
+  display:block;font-size:10px;font-weight:600;
+  letter-spacing:2px;color:var(--dim);margin-bottom:6px;
+}
+input{
+  width:100%;background:rgba(0,0,0,.35);
+  border:1px solid var(--border);border-radius:6px;
+  padding:12px 14px;color:#fff;
+  font-family:'JetBrains Mono',monospace;font-size:14px;
+  outline:none;transition:border-color .2s,box-shadow .2s;
+  -webkit-appearance:none;
+}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,200,255,.1)}
+input::placeholder{color:var(--dim)}
+.btn{
+  width:100%;padding:13px;margin-top:6px;
+  background:linear-gradient(135deg,var(--accent),#0070e0);
+  border:none;border-radius:6px;
+  color:#000;font-family:'Rajdhani',sans-serif;
+  font-size:15px;font-weight:700;letter-spacing:2px;
+  cursor:pointer;transition:opacity .2s,transform .1s;
+  -webkit-appearance:none;
+}
+.btn:hover{opacity:.9}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.spin{
+  display:inline-block;width:14px;height:14px;
+  border:2px solid rgba(0,0,0,.25);border-top-color:#000;
+  border-radius:50%;animation:spin .7s linear infinite;
+  vertical-align:middle;margin-right:7px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.msg{
+  border-radius:5px;padding:10px 13px;font-size:13px;
+  font-weight:600;margin-bottom:16px;display:none;
+}
+.msg.show{display:block;animation:up .25s ease}
+.msg.e{background:rgba(255,61,87,.1);border:1px solid rgba(255,61,87,.3);color:#ff6b80}
+.msg.s{background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);color:var(--ok)}
+.foot{
+  text-align:center;margin-top:20px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;color:var(--dim);letter-spacing:1px;
+}
+@media(max-width:420px){.card{padding:28px 22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <div class="logo">
+      <div class="hex">C</div>
+      <div class="title">CESTRIN</div>
+      <div class="sub">MONITOR CONTOARE TRAFIC</div>
+    </div>
+
+    <div class="msg e" id="me"></div>
+    <div class="msg s" id="ms"></div>
+
+    <div class="field">
+      <label>UTILIZATOR</label>
+      <input id="u" type="text" placeholder="username"
+             autocomplete="username" autocapitalize="none" spellcheck="false">
+    </div>
+    <div class="field">
+      <label>PAROLĂ</label>
+      <input id="p" type="password" placeholder="••••••••"
+             autocomplete="current-password">
+    </div>
+    <button class="btn" id="btn" onclick="login()">AUTENTIFICARE</button>
+  </div>
+  <div class="foot">🔒 CONEXIUNE SECURIZATĂ HTTPS</div>
+</div>
+
+<script>
+// Redirect dacă deja autentificat
+const tk = localStorage.getItem('tk');
+if(tk){
+  fetch('/api/me',{headers:{'Authorization':'Bearer '+tk}})
+    .then(r=>r.ok ? location.replace('/harta') : localStorage.clear())
+    .catch(()=>{});
+}
+
+document.addEventListener('keydown', e => { if(e.key==='Enter') login(); });
+
+function msg(type, text){
+  document.getElementById('me').className='msg e';
+  document.getElementById('ms').className='msg s';
+  const el = document.getElementById(type==='e'?'me':'ms');
+  el.textContent = text;
+  el.className = 'msg '+type+' show';
+}
+
+async function login(){
+  const btn=document.getElementById('btn');
+  const u=document.getElementById('u').value.trim();
+  const p=document.getElementById('p').value;
+  if(!u||!p){ msg('e','Completați username și parola.'); return; }
+
+  btn.disabled=true;
+  btn.innerHTML='<span class="spin"></span>SE AUTENTIFICĂ...';
+
+  try{
+    const r = await fetch('/api/login',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:u,password:p})
+    });
+    const d = await r.json();
+    if(!r.ok){ msg('e', d.error||'Eroare autentificare.'); return; }
+
+    localStorage.setItem('tk',   d.token);
+    localStorage.setItem('user', d.username);
+    localStorage.setItem('role', d.role);
+    localStorage.setItem('name', d.full_name||d.username);
+    localStorage.setItem('drdp', d.drdp||'');
+
+    msg('s','Bun venit, '+(d.full_name||d.username)+'!');
+    setTimeout(()=>location.replace('/harta'), 500);
+  } catch(e){
+    msg('e','Eroare de rețea.');
+  } finally{
+    btn.disabled=false;
+    btn.innerHTML='AUTENTIFICARE';
+  }
+}
+</script>
+</body>
+</html>
